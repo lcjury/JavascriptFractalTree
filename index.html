@@ -1,0 +1,163 @@
+<style>
+input {
+    width: 100%;
+}
+.container {
+    max-width: 800px;
+    display:flex;
+    margin: auto;
+}
+.container div {
+    padding: 5px;
+}
+.container button {
+    width: 100%;
+    padding: 5px;
+}
+.container input {
+    margin-bottom: 5px;
+}
+</style>
+
+<div class="container">
+    <div>
+        <label for="root_length">Root length: <span></span></label><br>
+        <input id="root_length" name="rootLength" type="range" min="1" max="200" value="100"><br>
+        <label for="max_branches">Max Branches: <span></span></label><br>
+        <input id="max_branches" name="maxBranches" type="range" min="1" max="10" value="5"><br>
+        <label for="min_branches">Min Branches: <span></span></label><br>
+        <input id="min_branches" name="minBranches" type="range" min="1" max="10" value="3"><br>
+
+        <label for="max_degrees">Max Degree: <span></span></label><br>
+        <input id="max_degrees" name="maxDegree" type="range" min="1" max="100" value="50"><br>
+        <label for="min_degrees">Min Degree: <span></span></label><br>
+        <input id="min_degrees" name="minDegree" type="range" min="1" max="100" value="20"><br>
+
+        <label for="max_shrink_factor">Max Shrink Factor: <span></span></label><br>
+        <input id="max_shrink_factor" name="maxShrinkFactor" type="range" min="1" max="100" value="70"><br>
+
+        <label for="min_shrink_factor">Min Shrink Factor: <span></span></label><br>
+        <input id="min_shrink_factor" name="minShrinkFactor" type="range" min="1" max="100" value="40"><br>
+        <br/>
+        <button>Re-draw</button>
+    </div>
+    <canvas id="myCanvas" width="500" height="500" style="background: #F8F9ED"></canvas>
+</div>
+<script>
+
+    class Tree {
+        constructor(rootX, rootY, ctx, options) {
+            this.maxBranches = 3;
+            this.minBranches = 1;
+            this.maxShrinkFactor = 70;
+            this.minShrinkFactor = 40;
+
+            this.maxDegree = 50;
+            this.minDegree = 20;
+
+            this.minShrinkFactor = 40;
+            this.rootLength = 100;
+
+            Object.assign(this, options);
+            this.branches = [];
+            this.generateFractalTree(rootX, rootY, 90, this.rootLength, 2);
+        }
+
+        getBranches() {
+            return this.branches;
+        }
+
+        generateFractalTree(x, y, deg, length, width) {
+            const x2 = x - Math.cos(this.toRad(deg)) * length;
+            const y2 = y - Math.sin(this.toRad(deg)) * length;
+
+            const branches = this.random(this.maxBranches, this.minBranches);
+            for(let i = 0; i < branches; i++) {
+                const newLength = length * this.random(this.maxShrinkFactor, this.minShrinkFactor) / 100;
+                if(newLength >= 5) {
+                    const degree = deg + this.randomDirection() * this.random(this.maxDegree, this.minDegree);
+                    const newWidth = Math.max(width - 0.3, 1);
+                    this.addBranch(x, y, x2, y2, newLength, newWidth);
+                    this.generateFractalTree(x2, y2, degree, newLength, newWidth);
+                }
+            }
+        }
+
+        addBranch(x1, y1, x2, y2, length, width) {
+            this.branches.push({
+                x1: x1,
+                y1: y1,
+                x2: x2,
+                y2: y2,
+                length: length,
+                width: width
+            });
+        }
+
+        toRad(deg) {
+            return deg * Math.PI / 180;
+        }
+
+        randomDirection() {
+            return this.random(1) ? 1 : -1;
+        }
+
+        random(max, min = 0) {
+            return Math.floor(Math.random()*(max-min+1)+min);
+        }
+
+        drawToCanvas(c) {
+            const leavesColors = ['#889F57', '#556910', '#D2E4AB'];
+            for(let i = 0; i < this.branches.length; i++) {
+                const branch = this.branches[i];
+                if(branch.length < 10) {
+                    c.strokeStyle = leavesColors[this.random(leavesColors.length - 1)];
+                } else {
+                    c.strokeStyle = '#53231B';
+                }
+
+
+                c.beginPath();
+                c.filter = 'blur(0.2px)';
+                c.lineWidth = branch.width;
+                c.moveTo(branch.x1, branch.y1);
+                c.lineTo(branch.x2, branch.y2);
+                c.stroke();
+                c.closePath();
+            }
+        }
+    }
+
+    function generateTree() {
+        var c = document.getElementById("myCanvas");
+        var ctx = c.getContext("2d");
+        const t = new Tree(c.width/2, c.height, ctx, getOptions());
+        ctx.clearRect(0, 0, c.width, c.height);
+        t.drawToCanvas(ctx);
+    }
+
+    function getOptions() {
+        inputs = document.querySelectorAll('input')
+        options = {}
+        inputs.forEach((input) => { options[input.name] = parseInt(input.value); })
+        return options;
+    }
+
+    generateTree();
+
+    function handleInputEvent(event) {
+        updateInputValue(event.target);
+    }
+
+    function updateInputValue(input) {
+        const label = input.labels[0]
+        label.firstElementChild.textContent = input.value;
+    }
+
+    inputs = document.querySelectorAll('input');
+    button = document.querySelectorAll('button')[0];
+    document.addEventListener('change', generateTree);
+    document.addEventListener('input', handleInputEvent);
+    button.addEventListener('click', generateTree);
+    inputs.forEach(updateInputValue)
+</script>
